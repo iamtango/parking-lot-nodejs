@@ -1,14 +1,14 @@
 # Parking Lot Service API Documentation
 
-The Parking Lot Service manages car parking and unparking operations, tracks capacity, and notifies the owner about status changes (Full/Available).
+The Parking Lot Service manages car parking and unparking operations across multiple lots. It includes Attendant logic to direct cars based on different strategies and maintains a complete history of all parking events.
 
 ## Base URL
-`http://localhost:3002/api/parking-lot`
+`http://localhost:3000/api/parking-lot`
 
 ## Endpoints
 
-### 1. Park a Car
-Used to park a car in the lot. It will reduce the available capacity.
+### 1. Park a Car (Attendant Mode)
+Used to park a car. The service acts as an attendant and directs the car to a lot based on the specified strategy.
 
 *   **URL:** `/park`
 *   **Method:** `POST`
@@ -16,87 +16,83 @@ Used to park a car in the lot. It will reduce the available capacity.
 *   **Request Body:**
     ```json
     {
-      "registrationNumber": "KA-01-HH-1234"
+      "registrationNumber": "KA-01-HH-1234",
+      "strategy": "FIRST_AVAILABLE" 
     }
     ```
+    *   **Strategies:** 
+        *   `FIRST_AVAILABLE` (Default): Parks in the first lot that has space.
+        *   `LEAST_AVAILABLE`: Parks in the lot that is most full (to compact cars).
+        *   `MOST_AVAILABLE`: Parks in the lot with the most free space (to distribute load).
+
 *   **CURL Example:**
     ```bash
-    curl -X POST http://localhost:3002/api/parking-lot/park \
+    curl -X POST http://localhost:3000/api/parking-lot/park \
       -H "Content-Type: application/json" \
-      -d '{"registrationNumber": "KA-01-HH-1234"}'
+      -d '{"registrationNumber": "KA-01-HH-1234", "strategy": "LEAST_AVAILABLE"}'
     ```
-*   **Success Response:**
-    *   **Code:** 201
-    *   **Content:**
-        ```json
-        {
-          "success": true,
-          "data": {
-            "registrationNumber": "KA-01-HH-1234"
-          },
-          "availableCapacity": 9
-        }
-        ```
-*   **Error Response:**
-    *   **Code:** 400 (Bad Request)
-    *   **Content:** `{ "success": false, "message": "Parking lot is full" }`
-    *   **Content:** `{ "success": false, "message": "Car already parked" }`
 
 ### 2. Unpark a Car
-Used to remove a car from the lot. It will increase the available capacity. If the lot was full, the owner will be notified that it is now available.
+Removes a car from whichever lot it is currently parked in.
 
 *   **URL:** `/unpark/:registrationNumber`
 *   **Method:** `DELETE`
 *   **Auth Required:** Yes
-*   **Path Parameters:**
-    *   `registrationNumber` (string): The registration number of the car to unpark.
 *   **CURL Example:**
     ```bash
-    curl -X DELETE http://localhost:3002/api/parking-lot/unpark/KA-01-HH-1234
+    curl -X DELETE http://localhost:3000/api/parking-lot/unpark/KA-01-HH-1234
     ```
-*   **Success Response:**
-    *   **Code:** 200
-    *   **Content:**
-        ```json
-        {
-          "success": true,
-          "data": {
-            "registrationNumber": "KA-01-HH-1234"
-          },
-          "availableCapacity": 10
-        }
-        ```
-*   **Error Response:**
-    *   **Code:** 404 (Not Found)
-    *   **Content:** `{ "success": false, "message": "Car not found" }`
 
 ### 3. Get Status
-Get the current state of the parking lot, including capacity and number of parked cars.
+Get the current state of all managed parking lots.
 
 *   **URL:** `/status`
 *   **Method:** `GET`
-*   **Auth Required:** Yes
 *   **CURL Example:**
     ```bash
-    curl -X GET http://localhost:3002/api/parking-lot/status
+    curl -X GET http://localhost:3000/api/parking-lot/status
+    ```
+
+### 4. Get Parking History
+Retrieves a complete log of all park and unpark actions with timestamps.
+
+*   **URL:** `/history`
+*   **Method:** `GET`
+*   **Query Parameters:**
+    *   `registrationNumber` (optional): Filter history for a specific car.
+*   **CURL Example:**
+    ```bash
+    # View all history
+    curl -X GET http://localhost:3000/api/parking-lot/history
+    
+    # Filter by car
+    curl -X GET http://localhost:3000/api/parking-lot/history?registrationNumber=KA-01-HH-1234
     ```
 *   **Success Response:**
-    *   **Code:** 200
-    *   **Content:**
-        ```json
+    ```json
+    {
+      "success": true,
+      "count": 2,
+      "data": [
         {
-          "success": true,
-          "capacity": 10,
-          "availableCapacity": 5,
-          "isFull": false,
-          "parkedCarsCount": 5
+          "registrationNumber": "KA-01-HH-1234",
+          "lotId": "LOT-1",
+          "action": "UNPARK",
+          "timestamp": "2026-01-05T13:38:00.000Z"
+        },
+        {
+          "registrationNumber": "KA-01-HH-1234",
+          "lotId": "LOT-1",
+          "action": "PARK",
+          "timestamp": "2026-01-05T13:35:00.000Z"
         }
-        ```
+      ]
+    }
+    ```
 
 ## Core Business Logic Requirements
-The API implements the following logic:
-1.  **Capacity Tracking**: Available capacity reduces when a car is parked and increases when unparked.
-2.  **Notification System**:
-    *   **Full Notification**: Triggered immediately when the last available spot is filled.
-    *   **Available Notification**: Triggered when a car is unparked from a lot that was previously at 100% capacity.
-3.  **Validation**: Prevents unparking of cars not present in the lot and prevents parking in a full lot.
+1.  **Multiple Lots**: The attendant manages a collection of parking lots.
+2.  **Parking Strategies**: Sequential, Packing (Least Available), or Distributed (Most Available).
+3.  **Cross-Lot Validation**: Prevents the same car from being parked in multiple lots simultaneously.
+4.  **Transaction Logging**: Every park and unpark action is recorded with an immutable timestamp.
+5.  **Notifications**: Owners are notified when lots become full or available.

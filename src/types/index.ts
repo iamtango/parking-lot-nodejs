@@ -8,8 +8,15 @@ export interface Observer {
 }
 
 export interface ParkingLot {
+  id: string;
   capacity: number;
-  parkedCars: Map<string, Car>; // Store the car object
+  parkedCars: Map<string, Car>;
   observers: Observer[];
   isFull: boolean;
+}
+
+export enum ParkingStrategy {
+  FIRST_AVAILABLE = 'FIRST_AVAILABLE',
+  LEAST_AVAILABLE = 'LEAST_AVAILABLE',
+  MOST_AVAILABLE = 'MOST_AVAILABLE'
 }
