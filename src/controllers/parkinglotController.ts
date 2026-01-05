@@ -2,32 +2,57 @@ import { Request, Response } from 'express';
 import * as parkinglotService from '../services/parkinglotService';
 import { ParkingStrategy } from '../types';
 
-// Initialize lots in DB if they don't exist
+// Initialize lots, attendants, and coordinators in DB if they don't exist
 (async () => {
   try {
+    // 1. Create Lots
     await parkinglotService.createParkingLot('LOT-1', 10);
     await parkinglotService.createParkingLot('LOT-2', 5);
+    await parkinglotService.createParkingLot('LOT-3', 8);
+
+    // 2. Create Attendants
+    await parkinglotService.createAttendant('ATT-1', 'Attendant One', ['LOT-1', 'LOT-2']);
+    await parkinglotService.createAttendant('ATT-2', 'Attendant Two', ['LOT-3']);
+
+    // 3. Create Coordinators
+    await parkinglotService.createCoordinator('COORD-1', 'Coordinator One', ['ATT-1', 'ATT-2']);
+    
+    console.log('✅ Monitoring system initialized (Lots, Attendants, Coordinators)');
   } catch (error) {
-    console.error('Error initializing lots:', error);
+    console.error('Error initializing system:', error);
   }
 })();
 
 export const parkCar = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { registrationNumber, strategy } = req.body;
+    const { registrationNumber, strategy, attendantId, coordinatorId } = req.body;
     if (!registrationNumber) {
       res.status(400).json({ success: false, message: 'Registration number is required' });
       return;
     }
 
     const parkStrategy = (strategy as ParkingStrategy) || ParkingStrategy.FIRST_AVAILABLE;
-    const result = await parkinglotService.directCar(registrationNumber, parkStrategy);
+    
+    let result: parkinglotService.ParkingResult;
+    if (coordinatorId) {
+      // Direct through coordinator
+      result = await parkinglotService.directCarThroughCoordinator(coordinatorId, registrationNumber, parkStrategy);
+    } else if (attendantId) {
+      // Direct through attendant
+      result = await parkinglotService.directCarThroughAttendant(attendantId, registrationNumber, parkStrategy);
+    } else {
+      // Default: Direct through all known lots
+      const allLots = await parkinglotService.getStatus();
+      const allLotIds = allLots.map(l => l.id);
+      result = await parkinglotService.directCarToAvailableLot(allLotIds, registrationNumber, parkStrategy);
+    }
     
     res.status(201).json({ 
       success: true, 
       data: result.car, 
       lotId: result.lotId,
-      message: `Car parked in ${result.lotId}`
+      attendantId: result.attendantId,
+      message: `Car parked successfully in ${result.lotId}`
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

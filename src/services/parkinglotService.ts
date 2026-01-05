@@ -1,6 +1,10 @@
-import { Car, ParkingStrategy } from '../types';
+import { Car, ParkingStrategy, ParkingResult } from '../types';
+
+export { ParkingResult };
 import ParkingLotModel, { IParkingLot, IParkedCar } from '../models/parkinglot';
 import ParkingHistoryModel, { ParkingAction } from '../models/parkingHistory';
+import AttendantModel, { IAttendant } from '../models/attendant';
+import CoordinatorModel, { ICoordinator } from '../models/coordinator';
 
 // Create a new lot in DB
 export const createParkingLot = async (lotId: string, capacity: number): Promise<void> => {
@@ -14,6 +18,30 @@ export const createParkingLot = async (lotId: string, capacity: number): Promise
     isFull: false
   });
   await newLot.save();
+};
+
+export const createAttendant = async (attendantId: string, name: string, managedLotIds: string[]): Promise<void> => {
+  const existing = await AttendantModel.findOne({ attendantId });
+  if (existing) return;
+
+  const newAttendant = new AttendantModel({
+    attendantId,
+    name,
+    managedLotIds
+  });
+  await newAttendant.save();
+};
+
+export const createCoordinator = async (coordinatorId: string, name: string, managedAttendantIds: string[]): Promise<void> => {
+  const existing = await CoordinatorModel.findOne({ coordinatorId });
+  if (existing) return;
+
+  const newCoordinator = new CoordinatorModel({
+    coordinatorId,
+    name,
+    managedAttendantIds
+  });
+  await newCoordinator.save();
 };
 
 export const getAvailableCapacityFromDoc = (lot: IParkingLot): number => {
@@ -83,13 +111,9 @@ export const unpark = async (registrationNumber: string): Promise<Car> => {
   return { registrationNumber };
 };
 
-export const directCar = async (registrationNumber: string, strategy: ParkingStrategy): Promise<{ car: Car, lotId: string }> => {
-  if (await isCarAlreadyParked(registrationNumber)) {
-    throw new Error('Car already parked');
-  }
-
-  const allLots = await ParkingLotModel.find();
-  const availableLots = allLots.filter(lot => getAvailableCapacityFromDoc(lot) > 0);
+export const directCarToAvailableLot = async (lotIds: string[], registrationNumber: string, strategy: ParkingStrategy): Promise<ParkingResult> => {
+  const lots = await ParkingLotModel.find({ lotId: { $in: lotIds } });
+  const availableLots = lots.filter(lot => getAvailableCapacityFromDoc(lot) > 0);
 
   if (availableLots.length === 0) {
     throw new Error('No available parking lots');
@@ -116,6 +140,41 @@ export const directCar = async (registrationNumber: string, strategy: ParkingStr
 
   const car = await park(targetLot, registrationNumber);
   return { car, lotId: targetLot.lotId };
+};
+
+export const directCarThroughAttendant = async (attendantId: string, registrationNumber: string, strategy: ParkingStrategy): Promise<ParkingResult> => {
+  const attendant = await AttendantModel.findOne({ attendantId });
+  if (!attendant) {
+    throw new Error('Attendant not found');
+  }
+
+  return await directCarToAvailableLot(attendant.managedLotIds, registrationNumber, strategy);
+};
+
+export const directCarThroughCoordinator = async (coordinatorId: string, registrationNumber: string, strategy: ParkingStrategy): Promise<ParkingResult> => {
+  const coordinator = await CoordinatorModel.findOne({ coordinatorId });
+  if (!coordinator) {
+    throw new Error('Coordinator not found');
+  }
+
+  if (await isCarAlreadyParked(registrationNumber)) {
+    throw new Error('Car already parked');
+  }
+
+  const attendants = await AttendantModel.find({ attendantId: { $in: coordinator.managedAttendantIds } });
+  
+  // Find an attendant that has at least one lot with space
+  for (const attendant of attendants) {
+    try {
+      const result = await directCarThroughAttendant(attendant.attendantId, registrationNumber, strategy);
+      return { ...result, attendantId: attendant.attendantId };
+    } catch (e) {
+      // If this attendant couldn't find a spot, try the next one
+      continue;
+    }
+  }
+
+  throw new Error('No available attendants with free parking spots');
 };
 
 export const getStatus = async () => {

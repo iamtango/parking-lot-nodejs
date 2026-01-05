@@ -20,3 +20,22 @@ export enum ParkingStrategy {
   LEAST_AVAILABLE = 'LEAST_AVAILABLE',
   MOST_AVAILABLE = 'MOST_AVAILABLE'
 }
+
+export interface Attendant {
+  id: string;
+  name: string;
+  managedLotIds: string[];
+}
+
+export interface Coordinator {
+  id: string;
+  name: string;
+  managedAttendantIds: string[];
+}
+
+export interface ParkingResult {
+  car: Car;
+  lotId: string;
+  attendantId?: string;
+  message?: string;
+}
