@@ -1,0 +1,190 @@
+{
+	"info": {
+		"_postman_id": "844da50e-6d15-4b3c-8673-cf61d59ee2e2",
+		"name": "Parking lot",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "50503857",
+		"_collection_link": "https://vedang-nikure-1956325.postman.co/workspace/Vedang-Nikure's-Workspace~2f762e77-cf0f-487b-8d49-63a5e9d4c2c7/collection/50503857-844da50e-6d15-4b3c-8673-cf61d59ee2e2?action=share&source=collection_link&creator=50503857"
+	},
+	"item": [
+		{
+			"name": "Park a Car",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"registrationNumber\": \"KA-01-HH-1234\"}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseURL}}/api/parking-lot/park",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"parking-lot",
+						"park"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Park a Car Copy",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"registrationNumber\": \"KA-01-HH-1234\", \"strategy\": \"LEAST_AVAILABLE\"}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseURL}}/api/parking-lot/park",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"parking-lot",
+						"park"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Unpark a Car",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseURL}}/api/parking-lot/unpark/KA-01-HH-1234",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"parking-lot",
+						"unpark",
+						"KA-01-HH-1234"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Status",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseURL}}/api/parking-lot/status",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"parking-lot",
+						"status"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "View all history",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseURL}}/api/parking-lot/history",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"parking-lot",
+						"history"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Filter by car",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseURL}}/api/parking-lot/history?registrationNumber=KA-01-HH-1234",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"parking-lot",
+						"history"
+					],
+					"query": [
+						{
+							"key": "registrationNumber",
+							"value": "KA-01-HH-1234"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseURL",
+			"value": ""
+		}
+	]
+}
